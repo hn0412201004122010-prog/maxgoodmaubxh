@@ -5,36 +5,35 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Danh sách ảnh (thay đúng tên các file ảnh bạn có)
 const imageFiles = ['4.jpg']; 
 const cards = [];
 
 const textureLoader = new THREE.TextureLoader();
-const geometry = new THREE.PlaneGeometry(6, 3.375); // Tăng kích thước bảng (tỷ lệ 16:9)
+const geometry = new THREE.PlaneGeometry(6, 3.375); 
 
-imageFiles.forEach((file, index) => {
+imageFiles.forEach((file) => {
   textureLoader.load(file, (texture) => {
-    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    // Chỉ hiển thị mặt trước để không bị ngược chữ
+    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.FrontSide });
     const card = new THREE.Mesh(geometry, material);
 
-    // Căn chuẩn tọa độ về chính giữa không gian (X=0, Y=0, Z=0)
     card.position.set(0, 0, 0);
-    
     scene.add(card);
     cards.push(card);
   });
 });
 
-// Đặt camera thẳng góc với tâm màn hình
-camera.position.set(0, 0, 5);
+camera.position.set(0, 0, 4.5);
 camera.lookAt(0, 0, 0);
 
-// Vòng lặp xoay nhẹ 3D
+// Hiệu ứng đung đung lắc nhẹ (Sweep Angle) chuẩn Esports
+let angle = 0;
 function animate() {
   requestAnimationFrame(animate);
   
+  angle += 0.015;
   cards.forEach(card => {
-    card.rotation.y += 0.005; // Xoay nhẹ quanh trục Y
+    card.rotation.y = Math.sin(angle) * 0.15; // Lắc nhẹ qua lại 15 độ, không bị xoay lật mặt sau
   });
 
   renderer.render(scene, camera);
@@ -42,7 +41,6 @@ function animate() {
 
 animate();
 
-// Tự động căn chỉnh khi thay đổi kích thước cửa sổ trình duyệt
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
