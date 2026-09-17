@@ -1,41 +1,50 @@
-// 1. Khởi tạo Không gian (Scene), Camera và Bộ dựng hình (Renderer)
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// 2. Danh sách ảnh bảng xếp hạng của bạn
-const imageFiles = ['1.jpg', '2.jpg', '3.jpg', '4.jpg']; 
+// Danh sách ảnh (thay đúng tên các file ảnh bạn có)
+const imageFiles = ['4.jpg']; 
 const cards = [];
 
-// 3. Tải ảnh và dán lên các tấm thẻ 3D (Mesh)
 const textureLoader = new THREE.TextureLoader();
-const geometry = new THREE.PlaneGeometry(4, 2.25); // Tỉ lệ khung hình 16:9
+const geometry = new THREE.PlaneGeometry(6, 3.375); // Tăng kích thước bảng (tỷ lệ 16:9)
 
 imageFiles.forEach((file, index) => {
   textureLoader.load(file, (texture) => {
     const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
     const card = new THREE.Mesh(geometry, material);
 
-    // Xếp các thẻ nằm ngang cách nhau một khoảng
-    card.position.x = (index - (imageFiles.length - 1) / 2) * 4.5;
+    // Căn chuẩn tọa độ về chính giữa không gian (X=0, Y=0, Z=0)
+    card.position.set(0, 0, 0);
     
     scene.add(card);
     cards.push(card);
   });
 });
 
-camera.position.z = 7;
+// Đặt camera thẳng góc với tâm màn hình
+camera.position.set(0, 0, 5);
+camera.lookAt(0, 0, 0);
 
-// 4. Hàm Vòng lặp Animation (Cho các thẻ tự xoay nhẹ)
+// Vòng lặp xoay nhẹ 3D
 function animate() {
   requestAnimationFrame(animate);
   
   cards.forEach(card => {
-    card.rotation.y += 0.005; // Hiệu ứng tự xoay 3D
+    card.rotation.y += 0.005; // Xoay nhẹ quanh trục Y
   });
 
   renderer.render(scene, camera);
 }
+
 animate();
+
+// Tự động căn chỉnh khi thay đổi kích thước cửa sổ trình duyệt
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
