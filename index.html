@@ -1,90 +1,271 @@
-// --- BẢO VỆ NÂNG CAO: TẢI ẢNH DẠNG BLOB ĐỂ DẤU LINK TRONG NETWORK ---
-const gallery = document.getElementById('gallery-container');
-const fragment = document.createDocumentFragment();
-
-const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightbox-img');
-const closeBtn = document.getElementById('close-btn');
-
-// Lưu trữ các URL Blob đã mã hóa
-const blobCache = {};
-
-async function fetchAndCreateBlobUrl(imageSrc) {
-    if (blobCache[imageSrc]) return blobCache[imageSrc];
-    try {
-        const response = await fetch(imageSrc);
-        if (!response.ok) return null;
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        blobCache[imageSrc] = blobUrl;
-        return blobUrl;
-    } catch (e) {
-        return null;
-    }
-}
-
-for (let i = 1; i <= 200; i++) {
-    const div = document.createElement('div');
-    div.className = 'image-container';
-
-    const fileName = i + '.png';
-
-    const img = document.createElement('img');
-    img.alt = 'Bảng ' + i;
-    img.loading = 'lazy';
-
-    // Tải ảnh qua Fetch API -> Blob URL
-    fetchAndCreateBlobUrl(fileName).then(blobUrl => {
-        if (blobUrl) {
-            img.src = blobUrl;
-        } else {
-            div.style.display = 'none';
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BẢNG XẾP HẠNG BOT TÍNH ĐIỂM MAXGOD</title>
+    <style>
+        /* --- GIAO DIỆN TỐI MÀU (DARK MODE) --- */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212; 
+            color: #e0e0e0; 
+            text-align: center; 
+            padding: 20px; 
+            margin: 0;
+            
+            /* Chặn bôi đen toàn trang */
+            user-select: none; 
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
-    });
-
-    div.onclick = function() {
-        if (blobCache[fileName]) {
-            openLightbox(blobCache[fileName]);
+        
+        h1 { 
+            color: #ffffff; 
+            margin-bottom: 30px; 
+            font-weight: 300; 
         }
-    };
 
-    const overlay = document.createElement('div');
-    overlay.className = 'image-overlay';
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding-bottom: 50px;
+        }
 
-    const numberSpan = document.createElement('span');
-    numberSpan.className = 'image-number';
-    numberSpan.innerText = i; 
+        /* --- KHUNG CHỨA ẢNH & LỚP MÀNG BẢO VỆ --- */
+        .image-container {
+            position: relative;
+            width: 300px;
+            cursor: pointer; 
+            overflow: hidden;
+            border-radius: 12px;
+            transition: box-shadow 0.3s ease;
+            content-visibility: auto; 
+            contain-intrinsic-size: 300px 170px;
+        }
 
-    div.appendChild(img);
-    div.appendChild(overlay);
-    div.appendChild(numberSpan);
-    fragment.appendChild(div);
-}
+        .image-container:hover {
+            box-shadow: 0 8px 20px rgba(0, 255, 204, 0.2); 
+        }
 
-gallery.appendChild(fragment);
+        .image-container img { 
+            width: 100%; 
+            height: auto; 
+            display: block;
+            transition: transform 0.5s ease;
+            background-color: #1e1e1e;
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
 
-function openLightbox(blobUrl) {
-    lightboxImg.src = blobUrl; 
-    lightbox.classList.add('active'); 
-    document.body.style.overflow = 'hidden'; 
-}
+        .image-container:hover img {
+            transform: scale(1.08);
+        }
 
-function closeLightbox() {
-    lightbox.classList.remove('active'); 
-    document.body.style.overflow = ''; 
-    setTimeout(() => { lightboxImg.src = ''; }, 300);
-}
+        /* LỚP MÀNG TRONG SUỐT CHẶN CHUỘT PHẢI & TẢI ẢNH */
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            background: rgba(0,0,0,0);
+        }
 
-closeBtn.onclick = closeLightbox;
+        /* --- SỐ THỨ TỰ --- */
+        .image-number {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: #00ffcc; 
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            pointer-events: none; 
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            z-index: 10;
+        }
 
-lightbox.onclick = function(e) {
-    if (e.target !== lightboxImg) {
-        closeLightbox();
-    }
-};
+        /* --- KHUNG XEM ẢNH LỚN (LIGHTBOX) --- */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; 
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && lightbox.classList.contains('active')) {
-        closeLightbox();
-    }
-});
+        .lightbox-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .lightbox-wrapper {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 8px;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
+
+        .lightbox-overlay.active .lightbox-image {
+            transform: scale(1);
+        }
+
+        .close-lightbox {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1010;
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;" ondragstart="return false;" onselectstart="return false;">
+
+    <h1>BẢNG XẾP HẠNG BOT TÍNH ĐIỂM MAXGOD</h1>
+
+    <div class="gallery" id="gallery-container"></div>
+
+    <!-- KHUNG LIGHTBOX -->
+    <div class="lightbox-overlay" id="lightbox">
+        <span class="close-lightbox" id="close-btn">&times;</span>
+        <div class="lightbox-wrapper">
+            <img src="" alt="Ảnh lớn" class="lightbox-image" id="lightbox-img">
+            <div class="image-overlay"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- CHẶN PHÍM TẮT DEVTOOLS & F12 ---
+        window.addEventListener('keydown', function (e) {
+            if (
+                e.key === 'F12' || 
+                e.keyCode === 123 ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+                (e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's'))
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, true);
+
+        // --- TẢI ẢNH MÃ HÓA BLOB ---
+        const gallery = document.getElementById('gallery-container');
+        const fragment = document.createDocumentFragment();
+
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeBtn = document.getElementById('close-btn');
+
+        const blobCache = {};
+
+        async function fetchAndCreateBlobUrl(imageSrc) {
+            if (blobCache[imageSrc]) return blobCache[imageSrc];
+            try {
+                const response = await fetch(imageSrc);
+                if (!response.ok) return null;
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                blobCache[imageSrc] = blobUrl;
+                return blobUrl;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        for (let i = 1; i <= 200; i++) {
+            const div = document.createElement('div');
+            div.className = 'image-container';
+
+            const fileName = i + '.png';
+
+            const img = document.createElement('img');
+            img.alt = 'Bảng ' + i;
+            img.loading = 'lazy';
+
+            fetchAndCreateBlobUrl(fileName).then(blobUrl => {
+                if (blobUrl) {
+                    img.src = blobUrl;
+                } else {
+                    div.style.display = 'none';
+                }
+            });
+
+            div.onclick = function() {
+                if (blobCache[fileName]) {
+                    openLightbox(blobCache[fileName]);
+                }
+            };
+
+            const overlay = document.createElement('div');
+            overlay.className = 'image-overlay';
+
+            const numberSpan = document.createElement('span');
+            numberSpan.className = 'image-number';
+            numberSpan.innerText = i; 
+
+            div.appendChild(img);
+            div.appendChild(overlay);
+            div.appendChild(numberSpan);
+            fragment.appendChild(div);
+        }
+
+        gallery.appendChild(fragment);
+
+        function openLightbox(blobUrl) {
+            lightboxImg.src = blobUrl; 
+            lightbox.classList.add('active'); 
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('active'); 
+            document.body.style.overflow = ''; 
+            setTimeout(() => { lightboxImg.src = ''; }, 300);
+        }
+
+        closeBtn.onclick = closeLightbox;
+
+        lightbox.onclick = function(e) {
+            if (e.target !== lightboxImg) {
+                closeLightbox();
+            }
+        };
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                closeLightbox();
+            }
+        });
+    </script>
+</body>
+</html>
