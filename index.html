@@ -72,8 +72,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 5; /* Đè lên trên ảnh */
-            background: rgba(0,0,0,0); /* Trong suốt */
+            z-index: 5;
+            background: rgba(0,0,0,0);
         }
 
         /* --- SỐ THỨ TỰ --- */
@@ -159,12 +159,42 @@
         <span class="close-lightbox" id="close-btn">&times;</span>
         <div class="lightbox-wrapper">
             <img src="" alt="Ảnh lớn" class="lightbox-image" id="lightbox-img">
-            <div class="image-overlay"></div> <!-- Màng bảo vệ ảnh lớn -->
+            <div class="image-overlay"></div>
         </div>
     </div>
 
     <script>
-        // --- BẢO VỆ MẠNH MẼ: CHẶN F12 & PHÍM TẮT XEM CODE ---
+        // =========================================================
+        // 1. BẪY CHỐNG MỞ F12 TRƯỚC VÀ TRONG KHI VÀO TRANG WEB
+        // =========================================================
+        
+        // Kỹ thuật A: Bẫy vòng lặp debugger liên tục (Làm giật/đơ tab DevTools)
+        setInterval(function() {
+            const startTime = performance.now();
+            (function() {}.constructor("debugger")());
+            const endTime = performance.now();
+            
+            // Nếu phát hiện độ trễ cao (do DevTools đang dừng lại ở điểm debugger)
+            if (endTime - startTime > 100) {
+                document.body.innerHTML = '<h1 style="color:red; margin-top:20%; font-size:28px;">CẢNH BÁO: VUI LÒNG TẮT DEVTOOLS/F12 ĐỂ XEM NỘI DUNG TRANG WEB!</h1>';
+            }
+        }, 100);
+
+        // Kỹ thuật B: Phát hiện thay đổi kích thước cửa sổ do mở DevTools
+        function checkDevToolsOpen() {
+            const widthThreshold = window.outerWidth - window.innerWidth > 160;
+            const heightThreshold = window.outerHeight - window.innerHeight > 160;
+            
+            if (widthThreshold || heightThreshold) {
+                document.body.innerHTML = '<h1 style="color:red; margin-top:20%; font-size:28px;">CẢNH BÁO: VUI LÒNG TẮT DEVTOOLS/F12 ĐỂ XEM NỘI DUNG TRANG WEB!</h1>';
+            }
+        }
+        window.addEventListener('resize', checkDevToolsOpen);
+        setInterval(checkDevToolsOpen, 500);
+
+        // =========================================================
+        // 2. CHẶN PHÍM TẮT DEVTOOLS TRÊN BÀN PHÍM
+        // =========================================================
         window.addEventListener('keydown', function (e) {
             if (
                 e.key === 'F12' || 
@@ -178,7 +208,9 @@
             }
         }, true);
 
-        // --- XỬ LÝ GIAO DIỆN ẢNH ---
+        // =========================================================
+        // 3. THIẾT LẬP GIAO DIỆN HÌNH ẢNH
+        // =========================================================
         const gallery = document.getElementById('gallery-container');
         const fragment = document.createDocumentFragment();
         
@@ -212,7 +244,7 @@
             numberSpan.innerText = i; 
 
             div.appendChild(img);
-            div.appendChild(overlay); // Phủ màng lên ảnh
+            div.appendChild(overlay);
             div.appendChild(numberSpan);
             fragment.appendChild(div);
         }
