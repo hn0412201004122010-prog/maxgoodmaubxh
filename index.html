@@ -13,7 +13,12 @@
             text-align: center; 
             padding: 20px; 
             margin: 0;
-            user-select: none; /* Ngăn bôi đen văn bản khi click nhanh */
+            
+            /* Chặn bôi đen và thao tác chọn trên toàn trang */
+            user-select: none; 
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         
         h1 { 
@@ -39,24 +44,27 @@
             border-radius: 12px;
             transition: box-shadow 0.3s ease;
             
-            /* Tăng tốc độ render web cực mạnh */
             content-visibility: auto; 
-            contain-intrinsic-size: 300px 170px; /* Kích thước dự kiến giữ chỗ */
+            contain-intrinsic-size: 300px 170px;
         }
 
         .image-container:hover {
             box-shadow: 0 8px 20px rgba(0, 255, 204, 0.2); 
         }
 
-        .image-container img { 
+        /* Chặn giữ tay/chạm kéo ảnh trên điện thoại & trình duyệt */
+        .image-container img, .lightbox-image { 
             width: 100%; 
             height: auto; 
             display: block;
             transition: transform 0.5s ease;
-            background-color: #1e1e1e; /* Màu nền chờ load ảnh */
+            background-color: #1e1e1e;
+            
+            pointer-events: auto;
+            -webkit-user-drag: none; /* Chặn kéo rê ảnh ra ngoài */
+            user-drag: none;
         }
 
-        /* Hiệu ứng phóng to nhẹ ảnh khi di chuột vào */
         .image-container:hover img {
             transform: scale(1.08);
         }
@@ -125,9 +133,7 @@
 
     <h1>BẢNG XẾP HẠNG BOT TÍNH ĐIỂM MAXGOD</h1>
 
-    <div class="gallery" id="gallery-container">
-        <!-- Javascript sẽ xử lý việc nhét ảnh vào đây -->
-    </div>
+    <div class="gallery" id="gallery-container"></div>
 
     <!-- KHUNG LIGHTBOX -->
     <div class="lightbox-overlay" id="lightbox">
@@ -136,14 +142,45 @@
     </div>
 
     <script>
+        // --- TÍNH NĂNG CHẶN CHUỘT PHẢI & CHẶN F12 / PHÍM TẮT DEVTOOLS ---
+        
+        // 1. Chặn menu chuột phải toàn trang
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // 2. Chặn các phím tắt mở DevTools
+        document.addEventListener('keydown', function(e) {
+            // Chặn F12
+            if (e.key === 'F12' || e.keyCode === 123) {
+                e.preventDefault();
+                return false;
+            }
+            // Chặn Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (Inspect/Console)
+            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+                e.preventDefault();
+                return false;
+            }
+            // Chặn Ctrl+U (Xem nguồn trang - View Source)
+            if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+            // Chặn Ctrl+S (Lưu trang web)
+            if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // --- XỬ LÝ DANH SÁCH ẢNH ---
         const gallery = document.getElementById('gallery-container');
-        const fragment = document.createDocumentFragment(); // TỐI ƯU JS: Đóng gói thẻ để ném ra web 1 lần duy nhất
+        const fragment = document.createDocumentFragment();
         
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');
         const closeBtn = document.getElementById('close-btn');
 
-        // Vòng lặp quét 200 ảnh thoải mái
         for (let i = 1; i <= 200; i++) {
             const div = document.createElement('div');
             div.className = 'image-container';
@@ -155,12 +192,12 @@
             const img = document.createElement('img');
             img.src = i + '.png';
             img.alt = 'Bảng ' + i;
+            img.loading = 'lazy';
+            img.decoding = 'async';
             
-            // TĂNG TỐC LOAD ẢNH
-            img.loading = 'lazy'; // Chỉ tải khi cuộn tới
-            img.decoding = 'async'; // Tránh làm đơ trang khi xử lý ảnh nặng
-            
-            // Ẩn mượt mà các ảnh bị thiếu
+            // Chặn kéo ảnh bằng chuột
+            img.ondragstart = () => false;
+
             img.onerror = function() {
                 this.parentElement.style.display = 'none';
             };
@@ -171,14 +208,11 @@
 
             div.appendChild(img);
             div.appendChild(numberSpan);
-            
-            fragment.appendChild(div); // Nhét tạm vào hộp
+            fragment.appendChild(div);
         }
 
-        // Đổ toàn bộ hộp ra giao diện (nhanh gấp nhiều lần nhét lẻ tẻ)
         gallery.appendChild(fragment);
 
-        // --- XỬ LÝ ĐÓNG/MỞ ẢNH LỚN ---
         function openLightbox(imageSrc) {
             lightboxImg.src = imageSrc; 
             lightbox.classList.add('active'); 
@@ -191,17 +225,14 @@
             setTimeout(() => { lightboxImg.src = ''; }, 300);
         }
 
-        // Đóng khi click vào nút X
         closeBtn.onclick = closeLightbox;
 
-        // Đóng khi click ra ngoài vùng ảnh lớn
         lightbox.onclick = function(e) {
             if (e.target !== lightboxImg) {
                 closeLightbox();
             }
         };
 
-        // Đóng khi nhấn phím ESC
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && lightbox.classList.contains('active')) {
                 closeLightbox();
