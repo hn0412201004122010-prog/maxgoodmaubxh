@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BẢNG XẾP HẠNG BOT TÍNH ĐIỂM MAXGOD</title>
     <style>
-        /* --- GIAO DIỆN TỐI MÀU (DARK MODE) --- */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #121212; 
@@ -13,8 +12,6 @@
             text-align: center; 
             padding: 20px; 
             margin: 0;
-            
-            /* Chặn bôi đen toàn trang */
             user-select: none; 
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -35,7 +32,6 @@
             padding-bottom: 50px;
         }
 
-        /* --- KHUNG CHỨA ẢNH & LỚP MÀNG BẢO VỆ --- */
         .image-container {
             position: relative;
             width: 300px;
@@ -65,7 +61,6 @@
             transform: scale(1.08);
         }
 
-        /* LỚP MÀNG TRONG SUỐT CHẶN CHUỘT PHẢI & TẢI ẢNH */
         .image-overlay {
             position: absolute;
             top: 0;
@@ -76,7 +71,6 @@
             background: rgba(0,0,0,0);
         }
 
-        /* --- SỐ THỨ TỰ --- */
         .image-number {
             position: absolute;
             top: 12px;
@@ -92,7 +86,6 @@
             z-index: 10;
         }
 
-        /* --- KHUNG XEM ẢNH LỚN (LIGHTBOX) --- */
         .lightbox-overlay {
             position: fixed;
             top: 0;
@@ -146,13 +139,42 @@
             cursor: pointer;
             z-index: 1010;
         }
+
+        /* KHUNG THÔNG BÁO KHI BẬT F12 */
+        #devtools-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #0d0d0d;
+            color: #ff4d4d;
+            z-index: 999999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 20px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body oncontextmenu="return false;" ondragstart="return false;" onselectstart="return false;">
 
-    <h1>BẢNG XẾP HẠNG BOT TÍNH ĐIỂM MAXGOD</h1>
+    <!-- CẢNH BÁO MỞ F12 -->
+    <div id="devtools-warning">
+        <p>⚠️ CẢNH BÁO BẢO MẬT</p>
+        <p style="color: #fff; font-size: 18px; font-weight: normal; margin-top: 10px;">
+            Vui lòng tắt DevTools (F12) để tiếp tục xem nội dung trang web!
+        </p>
+    </div>
 
-    <div class="gallery" id="gallery-container"></div>
+    <div id="main-content">
+        <h1>BẢNG XẾP HẠNG BOT TÍNH ĐIỂM MAXGOD</h1>
+        <div class="gallery" id="gallery-container"></div>
+    </div>
 
     <!-- KHUNG LIGHTBOX -->
     <div class="lightbox-overlay" id="lightbox">
@@ -164,7 +186,44 @@
     </div>
 
     <script>
-        // --- CHẶN PHÍM TẮT DEVTOOLS & F12 ---
+        // =========================================================
+        // PHÁT HIỆN F12 / DEVTOOLS VÀ TỰ ĐỘNG BẬT/TẮT CHẶN
+        // =========================================================
+        const warningEl = document.getElementById('devtools-warning');
+        const mainContentEl = document.getElementById('main-content');
+        let isDevToolsOpen = false;
+
+        function detectDevTools() {
+            const threshold = 160;
+            const widthDiff = window.outerWidth - window.innerWidth > threshold;
+            const heightDiff = window.outerHeight - window.innerHeight > threshold;
+            
+            // Đo trễDebugger
+            let start = performance.now();
+            (function() {}.constructor("debugger")());
+            let end = performance.now();
+            let debuggerLag = (end - start) > 100;
+
+            if (widthDiff || heightDiff || debuggerLag) {
+                if (!isDevToolsOpen) {
+                    isDevToolsOpen = true;
+                    warningEl.style.display = 'flex';
+                    mainContentEl.style.display = 'none';
+                    if (lightbox.classList.contains('active')) closeLightbox();
+                }
+            } else {
+                if (isDevToolsOpen) {
+                    isDevToolsOpen = false;
+                    warningEl.style.display = 'none';
+                    mainContentEl.style.display = 'block';
+                }
+            }
+        }
+
+        setInterval(detectDevTools, 500);
+        window.addEventListener('resize', detectDevTools);
+
+        // Chặn phím tắt mở DevTools
         window.addEventListener('keydown', function (e) {
             if (
                 e.key === 'F12' || 
@@ -178,7 +237,9 @@
             }
         }, true);
 
-        // --- TẢI ẢNH MÃ HÓA BLOB ---
+        // =========================================================
+        // TẢI ẢNH VÀ HIỂN THỊ
+        // =========================================================
         const gallery = document.getElementById('gallery-container');
         const fragment = document.createDocumentFragment();
 
