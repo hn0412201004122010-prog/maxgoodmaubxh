@@ -7,7 +7,7 @@
 <meta name="description" content="Sảnh trưng bày bảng xếp hạng bot tính điểm MAXGOD.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,600&family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 /* =========================================================================
    SẢNH VINH DANH — bảng màu "than hồng & đèn lồng"
@@ -585,9 +585,9 @@ input[type=range]{ width:100%; height:5px; accent-color:var(--lua); background:r
    ===================================================================== */
 var CAUHINH = {
   soBangToiDa    : 200,                           // dò từ 1 tới số này
-  duoiAnh        : ['png','jpg','jpeg','webp'],   // hỗ trợ nhiều định dạng
-  soLuongCungLuc : 4,                             // dò 4 số một lúc, tránh bị chặn
-  dungSauKhiHut  : 30,                            // hụt liên tiếp 30 số thì dừng dò
+  duoiAnh        : ['png','jpg','jpeg','webp'],   // hỗ trợ nhiều định dạng — chỉ để 1 đuôi nếu bạn biết chắc, sẽ nhanh hơn nữa
+  soLuongCungLuc : 8,                             // dò 8 số một lúc
+  dungSauKhiHut  : 20,                            // hụt liên tiếp 20 số thì dừng dò
   nhacNen        : ''                             // ví dụ: 'nhac-nen.mp3'
 };
 
@@ -661,17 +661,22 @@ function xepDang(w, h){
   return 'vuong';
 }
 
-/* thử lần lượt các đuôi cho một số; trả về null nếu không có ảnh nào */
+/* Thử tất cả đuôi CÙNG LÚC cho một số, lấy cái nào tải xong trước.
+   Bản trước thử từng đuôi một, phải chờ đủ 4 lượt gõ cửa mới biết
+   một số là "không có ảnh" — đây là lý do trang tải chậm. Giờ gộp
+   4 lượt gõ cửa thành 1, số nào không có ảnh sẽ báo về nhanh gấp
+   khoảng 4 lần. */
 function doMotSo(so, khiXong){
-  var j = 0;
-  (function thu(){
-    if(j >= CAUHINH.duoiAnh.length){ khiXong(null); return; }
-    var url = so + '.' + CAUHINH.duoiAnh[j++];
+  var xongRoi = false, conLai = CAUHINH.duoiAnh.length;
+  function bao(kq){ if(xongRoi) return; xongRoi = true; khiXong(kq); }
+  CAUHINH.duoiAnh.forEach(function(duoi){
+    var url = so + '.' + duoi;
     var im = new Image();
-    im.onload  = function(){ khiXong({ so:so, anh:url, dang:xepDang(im.naturalWidth, im.naturalHeight) }); };
-    im.onerror = thu;
+    im.decoding = 'async';
+    im.onload  = function(){ bao({ so:so, anh:url, dang:xepDang(im.naturalWidth, im.naturalHeight) }); };
+    im.onerror = function(){ conLai--; if(conLai === 0) bao(null); };
     im.src = url;
-  })();
+  });
 }
 
 /* Dò theo từng đợt nhỏ. Gọi hàng trăm ảnh cùng lúc sẽ bị máy chủ
@@ -744,7 +749,7 @@ function matBang(b, sau){
     ? 'transform:rotateY(180deg) translateZ(' + Math.max(1, ts.day) + 'px);'
     : 'transform:translateZ(0px);';
   return '<div class="facet' + khung + '" style="' + dat + '">' +
-      '<img src="' + b.anh + '" alt="Bảng số ' + b.so + '">' +
+      '<img src="' + b.anh + '" alt="Bảng số ' + b.so + '" decoding="async">' +
       '<div class="tagline"><span class="t1">BẢNG</span><span class="t2">' + b.so + '</span></div>' +
       '<div class="sheen" data-sheen style="opacity:.18"></div>' +
       (ts.anhLua && !sau ? '<div class="silk"></div>' : '') +
@@ -773,7 +778,7 @@ function veSanKhau(){
     matBang(b, true) +
     matBang(b, false) +
     (ts.luoiSan  ? '<div class="floorwork phong-' + ts.phong_nen + '"></div>' : '') +
-    (ts.bongSan  ? '<div class="echo" style="width:' + kt.r + ';aspect-ratio:' + kt.t + ';"><img src="' + b.anh + '" alt=""></div>' : '') +
+    (ts.bongSan  ? '<div class="echo" style="width:' + kt.r + ';aspect-ratio:' + kt.t + ';"><img src="' + b.anh + '" alt="" decoding="async"></div>' : '') +
     '<div class="pool" style="transform:translateX(-50%) scale(' + (ts.phong * 1.08) + ');"></div>';
 
   doiDen();
@@ -881,7 +886,7 @@ function dungKe(){
   var h = '';
   bang.forEach(function(b, i){
     h += '<button class="tile" data-i="' + i + '" title="Bảng số ' + b.so + '">' +
-           '<img src="' + b.anh + '" loading="lazy" alt=""><span class="no">' + b.so + '</span></button>';
+           '<img src="' + b.anh + '" loading="lazy" decoding="async" alt=""><span class="no">' + b.so + '</span></button>';
   });
   strip.innerHTML = h;
   strip.querySelectorAll('.tile').forEach(function(el){
@@ -937,7 +942,7 @@ function veVongXoay(){
          'transform:translateX(' + tx + 'px) translateZ(' + tz + 'px) rotateY(' + ry + 'deg) scale(' + ph + ');' +
          'opacity:' + mo + ';z-index:' + (20 - Math.abs(lech)) + ';">' +
            '<div class="leaf-in">' +
-             '<img src="' + b.anh + '" loading="lazy" alt="Bảng số ' + b.so + '">' +
+             '<img src="' + b.anh + '" loading="lazy" decoding="async" alt="Bảng số ' + b.so + '">' +
              '<div class="tagline" style="left:10px;top:10px;"><span class="t1">BẢNG</span><span class="t2">' + b.so + '</span></div>' +
              '<div class="leaf-veil">' + (giua ? '<button class="open-btn" data-mo="' + i + '">◈ Mở sân khấu 3D</button>' : '') + '</div>' +
            '</div></div>';
@@ -983,7 +988,7 @@ function veTuong(){
   var grid = document.getElementById('wall-grid');
   grid.innerHTML = bang.map(function(b, i){
     return '<button class="brick" data-i="' + i + '" title="Mở bảng số ' + b.so + '">' +
-             '<img src="' + b.anh + '" loading="lazy" alt="Bảng số ' + b.so + '">' +
+             '<img src="' + b.anh + '" loading="lazy" decoding="async" alt="Bảng số ' + b.so + '">' +
              '<span class="no">#' + b.so + '</span></button>';
   }).join('');
   grid.querySelectorAll('.brick').forEach(function(el){
